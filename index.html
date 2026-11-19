@@ -43,6 +43,15 @@
     .wheel-heading { align-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 16px; }
     .wheel-heading h2, .side-heading h2 { margin: 0; font-size: 17px; }
     .count-pill { border: 1px solid rgba(122,229,231,.24); padding: 7px 11px; border-radius: 99px; color: var(--cyan); background: rgba(122,229,231,.08); font-size: 12px; white-space: nowrap; }
+    .wheel-controls { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .sound-toggle {
+      width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto;
+      border: 1px solid rgba(213,145,174,.28); border-radius: 50%; color: #8a5c72;
+      cursor: pointer; background: rgba(255,255,255,.78); font-size: 17px;
+      box-shadow: 0 3px 10px rgba(130,92,110,.08); transition: transform .15s ease, background .15s ease;
+    }
+    .sound-toggle:hover { transform: scale(1.06); background: #fff; }
+    .sound-toggle[aria-pressed="false"] { color: #aa98a2; background: rgba(255,255,255,.48); }
     .wheel-wrap { position: relative; width: min(100%, 590px); aspect-ratio: 1; display: grid; place-items: center; }
     canvas { display: block; width: 100%; height: 100%; filter: drop-shadow(0 18px 30px rgba(0,0,0,.38)); }
     .pointer { position: absolute; z-index: 2; top: -2px; left: 50%; width: 0; height: 0; transform: translateX(-50%); border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 35px solid #fff2b0; filter: drop-shadow(0 3px 7px rgba(0,0,0,.55)); }
@@ -93,7 +102,7 @@
       <section class="panel wheel-panel" aria-label="英雄抽選轉盤">
         <div class="wheel-heading">
           <h2>準備好抽出你的英雄了嗎？</h2>
-          <span class="count-pill" id="wheelCount">載入中</span>
+          <div class="wheel-controls"><button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true" aria-label="關閉轉盤音效" title="音效開啟">🔊</button><span class="count-pill" id="wheelCount">載入中</span></div>
         </div>
         <div class="wheel-wrap">
           <canvas id="wheel" aria-label="由全部英雄組成的彩色轉盤"></canvas>
@@ -153,6 +162,68 @@
     const TAU = Math.PI * 2;
     let rotation = 0;
     let spinning = false;
+    const SOUND_STEP = Math.PI;
+    let soundEnabled = true;
+    let soundContext = null;
+    let lastSoundMark = 0;
+
+    function getSoundContext() {
+      if (!soundEnabled) return null;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      if (!soundContext) soundContext = new AudioContextClass();
+      if (soundContext.state === "suspended") soundContext.resume().catch(() => {});
+      return soundContext;
+    }
+
+    function playWheelTone(frequency, delay, duration, volume, type) {
+      const audio = getSoundContext();
+      if (!audio) return;
+      const start = audio.currentTime + delay;
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.type = type || "sine";
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.02);
+    }
+
+    function wheelSpinSound() {
+      playWheelTone(460, 0, 0.075, 0.035, "sine");
+    }
+
+    function wheelTickSound() {
+      playWheelTone(980, 0, 0.026, 0.035, "triangle");
+    }
+
+    function wheelWinSound() {
+      if (!soundEnabled) return;
+      playWheelTone(660, 0, 0.13, 0.045, "sine");
+      playWheelTone(784, 0.12, 0.15, 0.045, "sine");
+      playWheelTone(1047, 0.25, 0.25, 0.05, "sine");
+    }
+
+    function updateSoundButton() {
+      const button = document.getElementById("soundToggle");
+      button.textContent = soundEnabled ? "🔊" : "🔇";
+      button.setAttribute("aria-pressed", String(soundEnabled));
+      button.setAttribute("aria-label", soundEnabled ? "關閉轉盤音效" : "開啟轉盤音效");
+      button.title = soundEnabled ? "音效開啟" : "音效關閉";
+    }
+
+    document.getElementById("soundToggle").addEventListener("click", () => {
+      soundEnabled = !soundEnabled;
+      updateSoundButton();
+      if (soundEnabled) getSoundContext();
+    });
+    updateSoundButton();
+
+
     let history = [];
     let animationFrame;
 
@@ -243,6 +314,8 @@
     function normalize(angle) { return ((angle % TAU) + TAU) % TAU; }
 
     function spin() {
+      lastSoundMark = Math.floor(rotation / SOUND_STEP);
+      wheelSpinSound();
       if (spinning) return;
       spinning = true;
       spinButton.disabled = true;
@@ -260,6 +333,10 @@
         const t = Math.min(1, (now - startTime) / duration);
         const eased = 1 - Math.pow(1 - t, 4);
         rotation = startRotation + delta * eased;
+        if (duration > 1200) {
+          const soundMark = Math.floor(rotation / SOUND_STEP);
+          if (soundMark > lastSoundMark) { lastSoundMark = soundMark; wheelTickSound(); }
+        }
         drawWheel();
         if (t < 1) {
           animationFrame = requestAnimationFrame(frame);
@@ -276,6 +353,7 @@
 
     function showResult(name) {
       resultName.textContent = name;
+      wheelWinSound();
       resultHint.textContent = "這次就選它吧！再轉一次，看看下一位是誰。";
       history.unshift(name);
       history = history.slice(0, 5);
