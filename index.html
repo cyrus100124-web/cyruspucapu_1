@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#11131f">
+  <meta name="theme-color" content="#09111b">
   <title>英雄大轉盤</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
@@ -144,7 +144,7 @@
       <section class="panel wheel-panel" aria-label="英雄抽選轉盤">
         <div class="wheel-heading">
           <h2>準備好抽出你的英雄了嗎？</h2>
-          <div class="wheel-controls"><button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true" aria-label="關閉轉盤音效" title="音效開啟" aria-hidden="true"></button><span class="count-pill" id="wheelCount">載入中</span></div>
+          <div class="wheel-controls"><button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true" aria-label="關閉轉盤音效" title="音效開啟"></button><span class="count-pill" id="wheelCount">載入中</span></div>
         </div>
         <div class="wheel-wrap">
           <canvas id="wheel" aria-label="由全部英雄組成的彩色轉盤"></canvas>
@@ -200,7 +200,7 @@
     const heroList = document.getElementById("heroList");
     const search = document.getElementById("search");
     const historyEl = document.getElementById("history");
-    const palette = ["#ff6f91", "#ff9f68", "#ffd166", "#8ed081", "#4ecdc4", "#66a6e8", "#8c83e6", "#c879d7"];
+    const palette = ["#c7f25e", "#f5a462", "#48b8a3", "#597ce0", "#f1d75d", "#aa83dc", "#e76f51", "#6ecad0"];
     const TAU = Math.PI * 2;
     let rotation = 0;
     let spinning = false;
